@@ -60,7 +60,7 @@ Solver::Params MainWindow::get_params()
     p.alpha = ui->alpha->text().toDouble();
     p.A = ui->A->text().toDouble();
     p.omega = ui->omega->text().toDouble();
-    p.D = ui->D->text().toDouble();
+//    p.D = ui->D->text().toDouble();
 
     return p;
 }
@@ -126,7 +126,7 @@ void MainWindow::plot_eq()
     auto* series1 = new QLineSeries();
     auto* chart1 = new QChart();
 
-    for (size_t i = res.x.size()/16*15; i < res.x.size(); i++)
+    for (size_t i = res.x.size()/64*63; i < res.x.size(); i++)
     {
         series1->append(res.v[0][i], res.v[1][i]);
     }
@@ -136,6 +136,7 @@ void MainWindow::plot_eq()
 
     auto axisX = chart1->axes(Qt::Horizontal).back();
     auto axisY = chart1->axes(Qt::Vertical).back();
+//    axisY->setRange(0,10);
     set_axes(axisX, axisY, "x", QChar(0x1E8B), 24);
 
     chart1->legend()->hide();
@@ -149,7 +150,7 @@ void MainWindow::plot_eq()
     auto* series2 = new QLineSeries();
     auto* chart2 = new QChart();
 
-    for (size_t i = res.x.size()/16*15; i < res.x.size(); i++)
+    for (size_t i = res.x.size()/64*63; i < res.x.size(); i++)
     {
         series2->append(res.x[i], res.v[0][i]);
     }
@@ -172,7 +173,7 @@ void MainWindow::plot_eq()
     auto* series3 = new QLineSeries();
     auto* chart3 = new QChart();
 
-    for (size_t i = res.x.size()/16*15; i < res.x.size(); i++)
+    for (size_t i = res.x.size()/64*63; i < res.x.size(); i++)
     {
         series3->append(res.x[i], res.v[1][i]);
     }
@@ -209,9 +210,9 @@ void MainWindow::plot_eq()
 
     chart4->legend()->hide();
 
-    ui->potential->setRubberBand(QChartView::RectangleRubberBand);
-    ui->potential->setRenderHint(QPainter::Antialiasing);
-    ui->potential->setChart(chart4);
+//    ui->potential->setRubberBand(QChartView::RectangleRubberBand);
+//    ui->potential->setRenderHint(QPainter::Antialiasing);
+//    ui->potential->setChart(chart4);
 }
 
 static QString make_fullname(const std::string& dir_name, const std::string& file_name)
