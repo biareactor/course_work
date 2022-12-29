@@ -29,6 +29,8 @@ public:
         double alpha;
         double A;
         double omega;
+        bool step_control;
+        QString method;
         double D;
     };
 
@@ -97,12 +99,53 @@ std::pair<double, double> HeunScheme(double xn, double v1, double v2, func1 f1, 
     double k1_2 = f2(xn, v1, v2);
 
     double k2_1 = f1(xn + h, v1 + h * k1_1 + r * dist(RNG), v2 + h * k1_2 + r * dist(RNG));
+                //f1(xn + h, v1 + h * k1_1 + r * dist(RNG), v2 + h * k1_1 + r * dist(RNG));
     double k2_2 = f2(xn + h, v1 + h * k1_1 + r * dist(RNG), v2 + h * k1_2 + r * dist(RNG));
+                //f2(xn + h, v1 + h * k1_2 + r * dist(RNG), v2 + h * k1_2 + r * dist(RNG));
 
     v1 += h * (k1_1 + k2_1) / 2.0 + r * dist(RNG);
     v2 += h * (k1_2 + k2_2) / 2.0 + r * dist(RNG);
 
     return std::make_pair(v1, v2);
+}
+
+template <typename func1, typename func2>
+std::pair<double, double> RK4(double xn, double v1, double v2, func1 f1, func2 f2, double h)
+{
+    double k1, k2, k3, k4;
+
+    double k1_1 = f1(xn, v1, v2);
+    double k1_2 = f2(xn, v1, v2);
+
+    double k2_1 = //f1(xn + h / 2.0, v1 + h / 2.0 * k1_1, v2 + h / 2.0 * k1_2);
+                f1(xn + h / 2.0, v1 + h / 2.0 * k1_1, v2 + h / 2.0 * k1_1);
+    double k2_2 = //f2(xn + h / 2.0, v1 + h / 2.0 * k1_1, v2 + h / 2.0 * k1_2);
+                f2(xn + h / 2.0, v1 + h / 2.0 * k1_2, v2 + h / 2.0 * k1_2);
+
+    double k3_1 = f1(xn + h / 2.0, v1 + h / 2.0 * k2_1, v2 + h / 2.0 * k2_2);
+    double k3_2 = f2(xn + h / 2.0, v1 + h / 2.0 * k2_1, v2 + h / 2.0 * k2_2);
+
+    double k4_1 = f1(xn + h, v1 + h * k3_1, v2 + h * k3_2);
+    double k4_2 = f2(xn + h, v1 + h * k3_1, v2 + h * k3_2);
+
+    v1 += h / 6.0 * (k1_1 + 2 * k2_1 + 2 * k3_1 + k4_1);
+    v2 += h / 6.0 * (k1_2 + 2 * k2_2 + 2 * k3_2 + k4_2);
+
+    return std::make_pair(v1, v2);
+}
+
+template <typename func1, typename func2>
+std::pair<double, double> RK4_double(double xn, double v1, double v2, func1 f1, func2 f2, double h)
+{
+    auto v = RK4(xn, v1, v2, f1, f2, h/2.0);
+    return RK4(xn+h/2.0, v.first, v.second, f1, f2, h/2.0);
+}
+
+template <typename func1, typename func2>
+std::pair<double, double> HeunScheme_double(double xn, double v1, double v2, func1 f1, func2 f2, double h)
+{
+    auto v = HeunScheme(xn, v1, v2, f1, f2, h/2.0, 0);
+    return HeunScheme(xn+h/2.0, v.first, v.second, f1, f2, h/2.0, 0);
 }
 
 static double modulo(double a)
@@ -111,10 +154,28 @@ static double modulo(double a)
     return a - floor (a / r) * r;
 }
 
+static double delta = std::pow(10, -10);
+static double eps = std::pow(10, -3);
+static size_t p = 4;
+//size_t p = 2;
+
+static void step_control(double s, size_t& inc_step, size_t& dec_step)
+{
+    double eps_min = eps / pow(2, p + 1);
+
+    if (s < eps_min - delta)
+        ++inc_step;
+    else if (s > eps + delta)
+        ++dec_step;
+}
+
 template <typename func1, typename func2>
 Solver::Result Solver::eq_solve(func1 f1, func2 f2)
 {
     Result res;
+    if (params.x0 >= params.border - params.eps_border)
+        return res;
+
     res.x.push_back(params.x0);
     res.v.resize(2);
     res.v[0].push_back(params.u1);
@@ -125,26 +186,108 @@ Solver::Result Solver::eq_solve(func1 f1, func2 f2)
     double step = params.h0;
 
     size_t i = 0;
-    while(i < params.n && x < params.border - params.eps_border)
+    size_t inc_step = 0;
+    size_t dec_step = 0;
+    bool last_step = false;
+
+    std::pair<double, double> v = {0,0};
+    std::pair<double, double> v2 = {0,0};
+    double s = 0;
+
+    while(i < params.n || last_step)
     {
-        while ((x + step) > params.border)
-            step = params.border - x - params.eps_border / 2.0;
+        if (params.method == "Хюна")
+        {
+            double r = sqrt(2.0 * params.D * step);
+            v = HeunScheme(x, v.first, v.second, f1, f2, step, r);
 
-        x += step;
+            if (params.step_control)
+                v2 = HeunScheme_double(x, v.first, v.second, f1, f2, step);
+        }
+        else if (params.method == "РК 4")
+        {
+            v = RK4(x, v.first, v.second, f1, f2, step);
 
-        double r = sqrt(2.0 * params.D * step);
-        auto v = HeunScheme(x, res.v[0].back(), res.v[1].back(), f1, f2, step, r);
+            if (params.step_control)
+                v2 = RK4_double(x, v.first, v.second, f1, f2, step);
+        }
 
-        res.x.push_back(x);
-        res.v[0].push_back(modulo(v.first));
-//        res.v[0].push_back(v.first);
-        res.v[1].push_back(v.second);
-        res.step.push_back(step);
+        if (params.step_control)
+        {
+            double s1 = (v2.first - v.first) / (pow(2, p) - 1);
+            double s2 = (v2.second - v.second) / (pow(2, p) - 1);
+            s = std::max(std::abs(s1), std::abs(s2));
+            //double local_err = pow(2, p)*s;
 
-        ++i;
+            step_control(s, inc_step, dec_step);
+            step /= std::pow(2, dec_step);
+        }
+
+        if (!params.step_control || s < eps + delta)
+        {
+            res.x.push_back(x);
+            res.v[0].push_back(modulo(v.first));
+     //        res.v[0].push_back(v.first);
+            res.v[1].push_back(v.second);
+            res.step.push_back(step);
+            x += step;
+            ++i;
+
+            if (last_step)
+                break;
+
+            if (params.step_control)
+                step *= std::pow(2, inc_step);
+
+            if ((x + step) > params.border)
+            {
+                step = params.border - x - params.eps_border / 2.0;
+                last_step = true;
+            }
+
+            inc_step = 0;
+            dec_step = 0;
+        }
     }
 
     return res;
 }
+
+//template <typename func1, typename func2>
+//Solver::Result Solver::eq_solve(func1 f1, func2 f2)
+//{
+//    Result res;
+//    res.x.push_back(params.x0);
+//    res.v.resize(2);
+//    res.v[0].push_back(params.u1);
+//    res.v[1].push_back(params.u2);
+//    res.step.push_back(0);
+
+//    double x = params.x0;
+//    double step = params.h0;
+
+//    size_t i = 0;
+//    while(i < params.n && x < params.border - params.eps_border)
+//    {
+//        while ((x + step) > params.border)
+//            step = params.border - x - params.eps_border / 2.0;
+
+//        x += step;
+
+//        double r = sqrt(2.0 * params.D * step);
+// //        auto v = HeunScheme(x, res.v[0].back(), res.v[1].back(), f1, f2, step, r);
+//        auto v = RK4(x, res.v[0].back(), res.v[1].back(), f1, f2, step);
+
+//        res.x.push_back(x);
+//        res.v[0].push_back(modulo(v.first));
+// //        res.v[0].push_back(v.first);
+//        res.v[1].push_back(v.second);
+//        res.step.push_back(step);
+
+//        ++i;
+//    }
+
+//    return res;
+//}
 
 #endif // SOLVER_H

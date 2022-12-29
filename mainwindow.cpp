@@ -60,6 +60,8 @@ Solver::Params MainWindow::get_params()
     p.alpha = ui->alpha->text().toDouble();
     p.A = ui->A->text().toDouble();
     p.omega = ui->omega->text().toDouble();
+    p.step_control = ui->step_control->isChecked();
+    p.method = ui->method->currentText();
 //    p.D = ui->D->text().toDouble();
 
     return p;
@@ -121,12 +123,18 @@ void MainWindow::plot_eq()
         }
     }
 
+    size_t part = ui->part->text().toUInt();
+    QString select_border = ui->select_border->currentText();
+    size_t start = select_border == "Начало" ? 0 : res.x.size()/part*(part-1);
+    size_t end = select_border == "Начало" ? res.x.size()/part : res.x.size();
+
     /*---------------phase portrait---------------------*/
 
     auto* series1 = new QLineSeries();
+    auto* series123 = new QLineSeries();
     auto* chart1 = new QChart();
 
-    for (size_t i = res.x.size()/64*63; i < res.x.size(); i++)
+    for (size_t i = start; i < end; i++)
     {
         series1->append(res.v[0][i], res.v[1][i]);
     }
@@ -150,7 +158,7 @@ void MainWindow::plot_eq()
     auto* series2 = new QLineSeries();
     auto* chart2 = new QChart();
 
-    for (size_t i = res.x.size()/64*63; i < res.x.size(); i++)
+    for (size_t i = start; i < end; i++)
     {
         series2->append(res.x[i], res.v[0][i]);
     }
@@ -173,7 +181,7 @@ void MainWindow::plot_eq()
     auto* series3 = new QLineSeries();
     auto* chart3 = new QChart();
 
-    for (size_t i = res.x.size()/64*63; i < res.x.size(); i++)
+    for (size_t i = start; i < end; i++)
     {
         series3->append(res.x[i], res.v[1][i]);
     }
