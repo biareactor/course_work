@@ -46,25 +46,41 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+static size_t get_method_order(const QString& method)
+{
+    size_t order = 0;
+
+    if (method == "Хюна")
+        order = 2;
+    else if (method == "РК 4")
+        order = 4;
+
+    return order;
+}
+
 Solver::Params MainWindow::get_params()
 {
-    Solver::Params p;
-    p.x0 = ui->x0->text().toDouble();
-    p.u1 = ui->u1->text().toDouble();
-    p.u2 = ui->u2->text().toDouble();
-    p.h0 = ui->h0->text().toDouble();
-    p.border = ui->border->text().toDouble();
-    p.eps_border = ui->eps_border->text().toDouble();
-    p.n = ui->n->text().toUInt();
-    p.a = ui->a->text().toDouble();
-    p.alpha = ui->alpha->text().toDouble();
-    p.A = ui->A->text().toDouble();
-    p.omega = ui->omega->text().toDouble();
-    p.step_control = ui->step_control->isChecked();
-    p.method = ui->method->currentText();
-//    p.D = ui->D->text().toDouble();
+    Solver::Params params;
+    params.x0 = ui->x0->text().toDouble();
+    params.u1 = ui->u1->text().toDouble();
+    params.u2 = ui->u2->text().toDouble();
+    params.h0 = ui->h0->text().toDouble();
+    params.border = ui->border->text().toDouble();
+    params.eps_border = ui->eps_border->text().toDouble();
+    params.n = ui->n->text().toUInt();
+    params.a = ui->a->text().toDouble();
+    params.alpha = ui->alpha->text().toDouble();
+    params.A = ui->A->text().toDouble();
+    params.omega = ui->omega->text().toDouble();
+    params.step_control = ui->step_control->isChecked();
+    params.method = ui->method->currentText();
+    //    p.D = ui->D->text().toDouble();
 
-    return p;
+    params.delta = std::pow(10, -10);
+    params.eps = std::pow(10, -3);
+    params.p = get_method_order(params.method); //method order
+
+    return params;
 }
 
 static void set_axes(QAbstractAxis* axisX, QAbstractAxis* axisY, QString label1, QString label2, size_t fontsize)
@@ -131,7 +147,6 @@ void MainWindow::plot_eq()
     /*---------------phase portrait---------------------*/
 
     auto* series1 = new QLineSeries();
-    auto* series123 = new QLineSeries();
     auto* chart1 = new QChart();
 
     for (size_t i = start; i < end; i++)

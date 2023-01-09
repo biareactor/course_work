@@ -21,6 +21,7 @@ set(PROJECT_SOURCES
         mainwindow.ui
         mainwindow.qrc
         solver.h
+        solver.cpp
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
