@@ -23,7 +23,7 @@ private:
     Ui::MainWindow *ui;
 
     Solver::Params get_params();
-    bool save_csv(const std::string& dir_name, const Solver::Result& res, const std::string& file_name = "file");
+//    bool save_csv(const std::string& dir_name, const Solver::Result& res, const std::string& file_name = "file");
 };
 
 #endif // MAINWINDOW_H

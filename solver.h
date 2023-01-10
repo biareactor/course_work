@@ -41,37 +41,36 @@ public:
     struct Result
     {
         vec x;
-        vecvec v; // vector{v1, v2}
+        vec v1;
+        vecvec v2;
         vec step;
 
-        Result() { v.resize(2); }
+//        vec get_values(size_t idx) const
+//        {
+//            vec res{x[idx]};
+//            for (size_t i = 0; i < v.size(); ++i)
+//                res.push_back(v[i][idx]);
+//            res.push_back(step[idx]);
 
-        vec get_values(size_t idx) const
-        {
-            vec res{x[idx]};
-            for (size_t i = 0; i < v.size(); ++i)
-                res.push_back(v[i][idx]);
-            res.push_back(step[idx]);
+//            return res;
+//        }
 
-            return res;
-        }
+//        QString get_fields_csv() const
+//        {
+//            std::string s = "x,v1,v2,step";
 
-        QString get_fields_csv() const
-        {
-            std::string s = "x,v1,v2,step";
+//            return s.c_str();
+//        }
 
-            return s.c_str();
-        }
+//        QString get_values_csv(size_t idx) const
+//        {
+//            std::string res;
+//            for (const auto& value : get_values(idx))
+//                res += std::to_string(value) + ",";
+//            res.pop_back();
 
-        QString get_values_csv(size_t idx) const
-        {
-            std::string res;
-            for (const auto& value : get_values(idx))
-                res += std::to_string(value) + ",";
-            res.pop_back();
-
-            return res.c_str();
-        }
+//            return res.c_str();
+//        }
     };
 
     Solver(const Params&p): params(p) {}

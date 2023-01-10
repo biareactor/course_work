@@ -1,4 +1,5 @@
 #include "solver.h"
+#include <cmath>
 
 double Solver::get_new_step(double s, double step, double x, bool& last_step)
 {
@@ -19,16 +20,22 @@ double Solver::get_s(const std::pair<double, double>& v, const std::pair<double,
     return std::max(std::abs(s1), std::abs(s2));
 }
 
-static double modulo(double a)
+
+
+static void push_val_to_v2(Solver::Result& res, const std::pair<double, double>& v)
 {
-    double r = 2 * M_PI;
-    return a - floor (a / r) * r;
+    double prev_val = !res.v1.empty() ? res.v1.back() : 0;
+
+    if (res.v2.empty() || (prev_val < (2*M_PI) * std::ceil(prev_val/(2*M_PI)) && v.first > (2*M_PI) * std::ceil(prev_val/(2*M_PI))))
+        res.v2.push_back({});
+
+    res.v2.back().push_back(v.second);
 }
 
 void Solver::make_step(Solver::Result& res, double x, const std::pair<double, double>& v, double step)
 {
     res.x.push_back(x);
-    res.v[0].push_back(modulo(v.first));
-    res.v[1].push_back(v.second);
+    push_val_to_v2(res, v);
+    res.v1.push_back(v.first);
     res.step.push_back(step);
 }

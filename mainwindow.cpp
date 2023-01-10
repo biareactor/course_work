@@ -95,6 +95,32 @@ static void set_axes(QAbstractAxis* axisX, QAbstractAxis* axisY, QString label1,
     axisY->setTitleFont(font);
 }
 
+static double modulo(double a)
+{
+    double r = 2 * M_PI;
+    return a - floor (a / r) * r;
+}
+
+static std::pair<double, double> find_idx_in_matrix(const std::vector<std::vector<double>>& v2, size_t start)
+{
+    size_t count = 0;
+    size_t i = 0;
+    size_t j = 0;
+
+    while (i < v2.size())
+    {
+        for (j = 0; j < v2[i].size() && count != start; ++j)
+            ++count;
+
+        if (count != start)
+            ++i;
+        else
+            break;
+    }
+
+    return {i, j};
+}
+
 void MainWindow::plot_eq()
 {
     // Clear table
@@ -120,24 +146,24 @@ void MainWindow::plot_eq()
 
     /*---------------save in file---------------------*/
 
-    if (ui->save->isChecked())
-    {
-        save_csv("./csv_saves", res, ui->file_name->text().toStdString());
-    }
+//    if (ui->save->isChecked())
+//    {
+//        save_csv("./csv_saves", res, ui->file_name->text().toStdString());
+//    }
 
     /*---------------table---------------------*/
 
-    for (size_t i = 0; i < res.x.size(); i++)
-    {
-        ui->table->insertRow(i);
+//    for (size_t i = 0; i < res.x.size(); i++)
+//    {
+//        ui->table->insertRow(i);
 
-        size_t j = 0;
-        for (const auto& value : res.get_values(i))
-        {
-            ui->table->setItem(i, j, new QTableWidgetItem(approx(value)));
-            ++j;
-        }
-    }
+//        size_t j = 0;
+//        for (const auto& value : res.get_values(i))
+//        {
+//            ui->table->setItem(i, j, new QTableWidgetItem(approx(value)));
+//            ++j;
+//        }
+//    }
 
     size_t part = ui->part->text().toUInt();
     QString select_border = ui->select_border->currentText();
@@ -146,20 +172,35 @@ void MainWindow::plot_eq()
 
     /*---------------phase portrait---------------------*/
 
-    auto* series1 = new QLineSeries();
     auto* chart1 = new QChart();
+    auto* series1 = new QLineSeries();
+    series1->setColor(QColorConstants::Blue);
+
+    auto[idx1, idx2] = find_idx_in_matrix(res.v2, start);
 
     for (size_t i = start; i < end; i++)
     {
-        series1->append(res.v[0][i], res.v[1][i]);
+        series1->append(modulo(res.v1[i]), res.v2[idx1][idx2]);
+
+        if (idx2 + 1 == res.v2[idx1].size())
+        {
+            chart1->addSeries(series1);
+            series1 = new QLineSeries();
+            series1->setColor(QColorConstants::Blue);
+
+            ++idx1;
+            idx2 = 0;
+        }
+        else
+            ++idx2;
     }
 
-    chart1->addSeries(series1);
     chart1->createDefaultAxes();
 
     auto axisX = chart1->axes(Qt::Horizontal).back();
     auto axisY = chart1->axes(Qt::Vertical).back();
-//    axisY->setRange(0,10);
+    axisX->setRange(0,6.29);
+    axisY->setRange(0,8);
     set_axes(axisX, axisY, "x", QChar(0x1E8B), 24);
 
     chart1->legend()->hide();
@@ -170,105 +211,107 @@ void MainWindow::plot_eq()
 
     /*---------------plot of coordinate versus time---------------------*/
 
-    auto* series2 = new QLineSeries();
-    auto* chart2 = new QChart();
+//    auto* series2 = new QLineSeries();
+//    auto* chart2 = new QChart();
 
-    for (size_t i = start; i < end; i++)
-    {
-        series2->append(res.x[i], res.v[0][i]);
-    }
+//    for (size_t i = start; i < end; i++)
+//    {
+//        series2->append(res.x[i], res.v1[i]);
+//    }
 
-    chart2->addSeries(series2);
-    chart2->createDefaultAxes();
+//    chart2->addSeries(series2);
+//    chart2->createDefaultAxes();
 
-    axisX = chart2->axes(Qt::Horizontal).back();
-    axisY = chart2->axes(Qt::Vertical).back();
-    set_axes(axisX, axisY, "t", "x", 24);
+//    axisX = chart2->axes(Qt::Horizontal).back();
+//    axisY = chart2->axes(Qt::Vertical).back();
+//    set_axes(axisX, axisY, "t", "x", 24);
 
-    chart2->legend()->hide();
+//    chart2->legend()->hide();
 
-    ui->coord_chart->setRubberBand(QChartView::RectangleRubberBand);
-    ui->coord_chart->setRenderHint(QPainter::Antialiasing);
-    ui->coord_chart->setChart(chart2);
+//    ui->coord_chart->setRubberBand(QChartView::RectangleRubberBand);
+//    ui->coord_chart->setRenderHint(QPainter::Antialiasing);
+//    ui->coord_chart->setChart(chart2);
 
-    /*---------------plot of speed versus time---------------------*/
+//    /*---------------plot of speed versus time---------------------*/
 
-    auto* series3 = new QLineSeries();
-    auto* chart3 = new QChart();
+//    auto* series3 = new QLineSeries();
+//    auto* chart3 = new QChart();
 
-    for (size_t i = start; i < end; i++)
-    {
-        series3->append(res.x[i], res.v[1][i]);
-    }
+//    for (size_t i = start; i < end; i++)
+//    {
+//        idx1 = 0;
+//        idx2 = 0;
+//        series3->append(res.x[i], res.v2[idx1][idx2]);
+//    }
 
-    chart3->addSeries(series3);
-    chart3->createDefaultAxes();
+//    chart3->addSeries(series3);
+//    chart3->createDefaultAxes();
 
-    axisX = chart3->axes(Qt::Horizontal).back();
-    axisY = chart3->axes(Qt::Vertical).back();
-    set_axes(axisX, axisY, "t", QChar(0x1E8B), 24);
+//    axisX = chart3->axes(Qt::Horizontal).back();
+//    axisY = chart3->axes(Qt::Vertical).back();
+//    set_axes(axisX, axisY, "t", QChar(0x1E8B), 24);
 
-    chart3->legend()->hide();
+//    chart3->legend()->hide();
 
-    ui->speed_chart->setRubberBand(QChartView::RectangleRubberBand);
-    ui->speed_chart->setRenderHint(QPainter::Antialiasing);
-    ui->speed_chart->setChart(chart3);
+//    ui->speed_chart->setRubberBand(QChartView::RectangleRubberBand);
+//    ui->speed_chart->setRenderHint(QPainter::Antialiasing);
+//    ui->speed_chart->setChart(chart3);
 
-    /*---------------- potential ------------------------*/
+//    /*---------------- potential ------------------------*/
 
-    auto* series4 = new QLineSeries();
-    auto* chart4 = new QChart();
+//    auto* series4 = new QLineSeries();
+//    auto* chart4 = new QChart();
 
-    for (size_t i = 0; i < res.x.size(); i++)
-    {
-        series4->append(res.x[i], -(p.a * res.x[i] + std::cos(res.x[i])));
-    }
+//    for (size_t i = 0; i < res.x.size(); i++)
+//    {
+//        series4->append(res.x[i], -(p.a * res.x[i] + std::cos(res.x[i])));
+//    }
 
-    chart4->addSeries(series4);
-    chart4->createDefaultAxes();
+//    chart4->addSeries(series4);
+//    chart4->createDefaultAxes();
 
-    axisX = chart4->axes(Qt::Horizontal).back();
-    axisY = chart4->axes(Qt::Vertical).back();
-    set_axes(axisX, axisY, "t", "x", 24);
+//    axisX = chart4->axes(Qt::Horizontal).back();
+//    axisY = chart4->axes(Qt::Vertical).back();
+//    set_axes(axisX, axisY, "t", "x", 24);
 
-    chart4->legend()->hide();
+//    chart4->legend()->hide();
 
 //    ui->potential->setRubberBand(QChartView::RectangleRubberBand);
 //    ui->potential->setRenderHint(QPainter::Antialiasing);
 //    ui->potential->setChart(chart4);
 }
 
-static QString make_fullname(const std::string& dir_name, const std::string& file_name)
-{
-    QDirIterator it(dir_name.c_str(), QStringList() << (file_name + "*.csv").c_str(), QDir::Files);
+//static QString make_fullname(const std::string& dir_name, const std::string& file_name)
+//{
+//    QDirIterator it(dir_name.c_str(), QStringList() << (file_name + "*.csv").c_str(), QDir::Files);
 
-    size_t total_files = 0;
-    while (it.next() != "")
-        ++total_files;
+//    size_t total_files = 0;
+//    while (it.next() != "")
+//        ++total_files;
 
-    return QString((dir_name + "/" + file_name + (total_files == 0 ? "" : std::to_string(total_files + 1)) + ".csv").c_str());
-}
+//    return QString((dir_name + "/" + file_name + (total_files == 0 ? "" : std::to_string(total_files + 1)) + ".csv").c_str());
+//}
 
-static std::string put_comma(bool condition)
-{
-    return condition ? "," : "";
-}
+//static std::string put_comma(bool condition)
+//{
+//    return condition ? "," : "";
+//}
 
-bool MainWindow::save_csv(const std::string& dir_name, const Solver::Result& res, const std::string& file_name)
-{
-    bool success = false;
+//bool MainWindow::save_csv(const std::string& dir_name, const Solver::Result& res, const std::string& file_name)
+//{
+//    bool success = false;
 
-    QFile data(make_fullname(dir_name, file_name));
-    if (data.open(QIODevice::ReadWrite))
-    {
-        QTextStream output(&data);
-        output << res.get_fields_csv() + '\n';
-        for (size_t i = 0; i < res.x.size(); ++i)
-            output << res.get_values_csv(i) + '\n';
+//    QFile data(make_fullname(dir_name, file_name));
+//    if (data.open(QIODevice::ReadWrite))
+//    {
+//        QTextStream output(&data);
+//        output << res.get_fields_csv() + '\n';
+//        for (size_t i = 0; i < res.x.size(); ++i)
+//            output << res.get_values_csv(i) + '\n';
 
-        success = true;
-    }
+//        success = true;
+//    }
 
-    data.close();
-    return success;
-}
+//    data.close();
+//    return success;
+//}
